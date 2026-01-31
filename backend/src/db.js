@@ -1,5 +1,12 @@
 const { Pool } = require('pg');
-require('dotenv').config();
+const fs = require('fs');
+const path = require('path');
+
+// Solo cargar dotenv si el archivo .env existe (desarrollo local)
+const envPath = path.join(__dirname, '../.env');
+if (fs.existsSync(envPath)) {
+    require('dotenv').config();
+}
 
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
@@ -54,6 +61,7 @@ const initDB = async () => {
         console.log('✅ Database initialized');
     } catch (err) {
         console.error('❌ Error initializing DB:', err);
+        throw err;
     }
 };
 
