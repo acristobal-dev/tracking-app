@@ -1,4 +1,6 @@
 const { Pool } = require('pg');
+const dns = require('dns');
+dns.setDefaultResultOrder('ipv4first');
 const fs = require('fs');
 const path = require('path');
 
@@ -11,6 +13,7 @@ if (fs.existsSync(envPath)) {
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    family: 4, // fuerza IPv4
     // Fallback para desarrollo local
     ...(!process.env.DATABASE_URL && {
         user: process.env.DB_USER,
