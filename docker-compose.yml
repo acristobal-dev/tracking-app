@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  # Base de datos PostgreSQL con PostGIS
+  postgres:
+    image: postgis/postgis:15-3.3-alpine
+    container_name: tracking_postgres
+    environment:
+      POSTGRES_USER: tracking_user
+      POSTGRES_PASSWORD: tracking_password
+      POSTGRES_DB: tracking_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tracking_user -d tracking_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tracking_network
+
+  # Backend Node.js
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: tracking_backend
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: tracking_user
+      DB_PASSWORD: tracking_password
+      DB_NAME: tracking_db
+      NODE_ENV: development
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend/src:/app/src
+    networks:
+      - tracking_network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  tracking_network:
+    driver: bridge
