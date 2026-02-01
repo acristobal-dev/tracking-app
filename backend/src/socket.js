@@ -34,9 +34,9 @@ const setupSocket = (io) => {
 
                 connectedUsers.set(socket.id, { userId, username });
 
-                socket.emit('registered', { userId, username });
-                console.log(`✅ User registered: ${username} (ID: ${userId})`);
+                socket.emit('registered', { userId });
 
+                console.log(`✅ User registered: ${username} (ID: ${userId})`);
 
                 const userConnectedData = {
                     userId,
