@@ -8,7 +8,7 @@ const setupSocket = (io) => {
 
         socket.on('register', async (data) => {
             try {
-                const { username } = data;
+                const { username, latitude, longitude } = data;
 
                 const normalizedUsername = username.trim().toLowerCase();
 
@@ -24,21 +24,26 @@ const setupSocket = (io) => {
 
                 const userId = result.rows[0].id;
 
+                if (latitude && longitude) {
+                    await pool.query(
+                        `INSERT INTO locations (user_id, latitude, longitude, location)
+                 VALUES ($1, $2, $3, ST_SetSRID(ST_MakePoint($3, $2), 4326))`,
+                        [userId, latitude, longitude]
+                    );
+                }
+
                 connectedUsers.set(socket.id, { userId, username });
 
                 socket.emit('registered', { userId, username });
                 console.log(`✅ User registered: ${username} (ID: ${userId})`);
-                const locationResult = await pool.query(
-                    'SELECT latitude, longitude, timestamp FROM locations WHERE user_id = $1 ORDER BY timestamp DESC LIMIT 1',
-                    [userId]
-                );
+
 
                 const userConnectedData = {
                     userId,
-                    username,
-                    latitude: locationResult.rows[0]?.latitude,
-                    longitude: locationResult.rows[0]?.longitude,
-                    timestamp: locationResult.rows[0]?.timestamp,
+                    username: normalizedUsername,
+                    latitude,
+                    longitude,
+                    timestamp: new Date().toISOString(),
                 };
 
                 // Notificar a TODOS que este usuario se conectó
