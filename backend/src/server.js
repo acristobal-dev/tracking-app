@@ -2,10 +2,27 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
+const cron = require('node-cron');
 require('dotenv').config();
 
 const { pool, initDB } = require('./db');
 const setupSocket = require('./socket');
+
+cron.schedule('0 0 * * *', async () => {
+    try {
+        await pool.query(`
+            DELETE FROM locations l
+            WHERE l.id NOT IN (
+                SELECT DISTINCT ON (user_id) id 
+                FROM locations 
+                ORDER BY user_id, timestamp DESC
+            )
+        `);
+        console.log('✅ Old locations cleaned at midnight');
+    } catch (error) {
+        console.error('❌ Error cleaning locations:', err);
+    }
+});
 
 const app = express();
 const server = http.createServer(app);
