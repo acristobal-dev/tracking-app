@@ -10,7 +10,7 @@ const setupSocket = (io) => {
             try {
                 const { username, latitude, longitude } = data;
 
-                const normalizedUsername = username.trim().toLowerCase();
+                const normalizedUsername = username.trim().toUpperCase();
 
                 if (!normalizedUsername) {
                     socket.emit('error', { message: 'Invalid username' });
@@ -32,9 +32,31 @@ const setupSocket = (io) => {
                     );
                 }
 
-                connectedUsers.set(socket.id, { userId, username });
+                connectedUsers.set(socket.id, { userId, username: normalizedUsername });
 
-                socket.emit('registered', { userId });
+                const usersConnectedResult = await pool.query(`
+                    SELECT DISTINCT ON (u.id)
+                        u.id as user_id,
+                        u.username as user_name,
+                        u.is_online,
+                        l.latitude as last_latitude,
+                        l.longitude as last_longitude,
+                        l.timestamp
+                    FROM users u
+                    LEFT JOIN locations l ON u.id = l.user_id
+                    ORDER BY u.id, l.timestamp DESC
+                `);
+
+                const usersConnected = usersConnectedResult.rows.map(row => ({
+                    userId: row.user_id,
+                    userName: row.user_name,
+                    isOnline: row.is_online,
+                    lastLatitude: row.last_latitude,
+                    lastLongitude: row.last_longitude,
+                    timestamp: row.timestamp
+                }));
+
+                socket.emit('registered', { ownUser: userId, usersConnected });
 
                 console.log(`✅ User registered: ${username} (ID: ${userId})`);
 
